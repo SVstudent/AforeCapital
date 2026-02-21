@@ -1,0 +1,8 @@
+{
+  "name": "Aura Academy OS",
+  "description": "A Gemini 3 native Educational Operating System designed for deep reasoning, multimodal learning, and Socratic mentorship.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
