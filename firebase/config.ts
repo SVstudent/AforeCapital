@@ -13,16 +13,23 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (prevent duplicate initialization)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+let app;
+try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+} catch (error) {
+    console.error('Firebase initialization failed:', error);
+    // Create a mock app or handle gracefully
+    app = null;
+}
 
 // Auth instance
-export const auth = getAuth(app);
+export const auth = app ? getAuth(app) : null;
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Firestore instance
-export const db = getFirestore(app);
+export const db = app ? getFirestore(app) : null;
 
 export default app;
