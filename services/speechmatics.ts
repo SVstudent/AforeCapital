@@ -12,7 +12,7 @@ export class SpeechmaticsService {
     }
 
     async start(sampleRate: number = 16000) {
-        console.log('🎙️ Speechmatics: Starting real-time transcription...');
+        // Silently attempt connection (may fail if key is invalid)
         const url = `wss://eu2.rt.speechmatics.io/v2/en?auth_token=${this.apiKey}`;
 
         this.socket = new WebSocket(url);
@@ -45,8 +45,8 @@ export class SpeechmaticsService {
             }
         };
 
-        this.socket.onerror = (error) => {
-            console.error('❌ Speechmatics WebSocket Error:', error);
+        this.socket.onerror = () => {
+            // Silently handle — Speechmatics may not be configured
         };
     }
 

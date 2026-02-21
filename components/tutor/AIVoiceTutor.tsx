@@ -3,7 +3,6 @@ import {
     ArrowLeft,
     Mic,
     MicOff,
-    Volume2,
     Loader2,
     Maximize2,
     Minimize2
@@ -20,7 +19,7 @@ import { ResearchAgent } from '../../services/researchAgent';
 import { VisualAgent } from '../../services/visualAgent';
 import { AudioAgent } from '../../services/audioAgent';
 import { SharedAgentContext } from '../../services/sharedContext';
-import { SpeechmaticsService } from '../../services/speechmatics';
+
 import { MinimaxAudioService } from '../../services/minimaxAudio';
 import { ContextWindowService } from '../../services/contextWindowService';
 import { VoiceVisualizer } from './VoiceVisualizer';
@@ -76,15 +75,10 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
     const researchAgentRef = useRef<ResearchAgent | null>(null);
     const visualAgentRef = useRef<VisualAgent | null>(null);
     const audioAgentRef = useRef<AudioAgent | null>(null);
-    const speechmaticsRef = useRef<SpeechmaticsService | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const contextServiceRef = useRef<ContextWindowService>(new ContextWindowService());
-    const [liveTranscript, setLiveTranscript] = useState<string>('');
-    const liveTranscriptRef = useRef<string>('');
-    const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [showSpeechmaticsWarning, setShowSpeechmaticsWarning] = useState(true);
+    const [transcript, setTranscript] = useState<{ text: string; speaker: 'user' | 'ai'; id: string; time: string }[]>([]);
+    const transcriptEndRef = useRef<HTMLDivElement>(null);
 
     const sharedContextRef = useRef<SharedAgentContext>(new SharedAgentContext());
 
@@ -192,6 +186,12 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
                 result = await researchAgentRef.current.conductResearch(query);
                 sharedContextRef.current.updateResearchSummary(result);
                 addAgentLog(`Researcher: "Findings synthesized."`, 'success');
+
+                // Render research results on the whiteboard
+                if (whiteboardRef.current && result) {
+                    whiteboardRef.current.drawResearchResults(query, result);
+                    console.log('📋 Research results rendered on whiteboard');
+                }
             } catch (error) {
                 console.error('❌ Research Agent failed:', error);
                 addAgentLog('Lead: "Research Agent failed, synthesizing from internal knowledge."', 'warning');
@@ -215,8 +215,8 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
             return 'Error: Audio Specialist not available';
         },
         get_verified_transcript: async () => {
-            addAgentLog('Lead: "Fetching verified transcript..."', 'info');
-            return liveTranscriptRef.current || "No verified transcript available yet.";
+            addAgentLog('Lead: \"Fetching verified transcript...\"', 'info');
+            return "Transcript service not configured.";
         }
     }), [addAgentLog]);
 
@@ -232,6 +232,12 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
 
     const onMessage = useCallback((message: any) => {
         console.log('🔊 ElevenLabs Message:', message);
+        if (message?.message && message.message.length > 0) {
+            const speaker: 'user' | 'ai' = message.source === 'user' ? 'user' : 'ai';
+            const id = Math.random().toString(36).substring(7);
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setTranscript(prev => [...prev, { text: message.message, speaker, id, time }]);
+        }
     }, []);
 
     const onError = useCallback((error: any) => {
@@ -256,13 +262,7 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
         const runwareKey = import.meta.env.VITE_RUNWARE_API_KEY;
         const minimaxKey = import.meta.env.VITE_MINIMAX_API_KEY;
         const minimaxGroupId = import.meta.env.VITE_MINIMAX_GROUP_ID;
-        const speechmaticsKey = import.meta.env.VITE_SPEECHMATICS_API_KEY;
 
-        console.log('🎤 Speechmatics Context:', {
-            hasKey: !!speechmaticsKey,
-            keyPrefix: speechmaticsKey ? speechmaticsKey.substring(0, 5) + '...' : 'none',
-            isPlaceholder: speechmaticsKey?.includes('placeholder')
-        });
 
         if (geminiKey) geminiRef.current = new GeminiService(geminiKey);
 
@@ -282,21 +282,6 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
                 audioAgentRef.current,
                 sharedContextRef.current
             );
-        }
-
-        if (speechmaticsKey) {
-            speechmaticsRef.current = new SpeechmaticsService(speechmaticsKey);
-            speechmaticsRef.current.onTranscript((text, isFinal) => {
-                if (isFinal) {
-                    setLiveTranscript(prev => (prev + ' ' + text).slice(-500));
-                    liveTranscriptRef.current = (liveTranscriptRef.current + ' ' + text).slice(-500);
-                } else {
-                    setLiveTranscript(prev => {
-                        const base = prev.split(' ').slice(0, -5).join(' ');
-                        return (base + ' ' + text).slice(-500);
-                    });
-                }
-            });
         }
     }, []);
 
@@ -323,19 +308,10 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
         loadContext();
     }, [currentUser]);
 
+    // Auto-scroll transcript to bottom
     useEffect(() => {
-        return () => {
-            if (speechmaticsRef.current) speechmaticsRef.current.stop();
-            if (audioContextRef.current) {
-                audioContextRef.current.close().catch(console.error);
-                audioContextRef.current = null;
-            }
-            if (audioProcessorRef.current) {
-                audioProcessorRef.current.disconnect();
-                audioProcessorRef.current = null;
-            }
-        };
-    }, []);
+        transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [transcript]);
 
     const handleToggleSession = useCallback(async () => {
         if (conversation.status === 'connected') {
@@ -364,6 +340,15 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
                             1. The Research Specialist: Use 'call_research_agent' for facts and search. It also triggers visuals automatically.
                             2. The Visual Specialist: Use 'call_visual_agent' for diagrams and board work.
                             3. The Audio Specialist: Use 'call_audio_specialist' for sounds/music.
+                            4. The Context Window: Use 'update_context_window' to display key info in a floating card.
+                            
+                            CONTEXT WINDOW — USE THIS AGGRESSIVELY:
+                            - Call 'update_context_window' whenever you mention a formula, equation, definition, concept, theorem, key term, or important fact.
+                            - Call it when the student asks "what is...", "explain...", "how does...", "define...", or asks about ANY topic.
+                            - Call it when listing steps, processes, comparisons, or structured information.
+                            - The student has an "X" button to dismiss it anytime, so don't hold back — it's better to show too much than too little.
+                            - Use it as a VISUAL AID that complements your voice explanation. Include formulas in LaTeX format when applicable.
+                            - Example: If teaching quadratic formula, call update_context_window with the formula, key terms, and examples.
                             
                             COORDINATION & VISION:
                             - You share a 'Shared Memory' with your assistants.
@@ -378,26 +363,7 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
                     }
                 });
 
-                if (speechmaticsRef.current) {
-                    const audioContext = new AudioContext();
-                    audioContextRef.current = audioContext;
-                    const source = audioContext.createMediaStreamSource(stream);
-                    const processor = audioContext.createScriptProcessor(4096, 1, 1);
-                    audioProcessorRef.current = processor;
 
-                    await speechmaticsRef.current.start(audioContext.sampleRate);
-                    setIsTranscriptionActive(true);
-
-                    source.connect(processor);
-                    processor.connect(audioContext.destination);
-
-                    processor.onaudioprocess = (e) => {
-                        if (speechmaticsRef.current) {
-                            const inputData = e.inputBuffer.getChannelData(0);
-                            speechmaticsRef.current.sendAudio(inputData.buffer);
-                        }
-                    };
-                }
             } catch (error) {
                 console.error('Session failed:', error);
                 setStatusMessage('Microphone access required');
@@ -421,13 +387,7 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
             className={`flex-1 flex flex-col relative bg-slate-50 overflow-hidden transition-all duration-500 ${isFullscreen ? '!fixed !inset-0 !z-[9999] !m-0 !w-screen !h-screen bg-slate-50' : 'h-full'}`}
             style={isFullscreen ? { top: 0, left: 0, right: 0, bottom: 0 } : {}}
         >
-            {/* Speechmatics Status Toast */}
-            {isTranscriptionActive && import.meta.env.VITE_SPEECHMATICS_API_KEY?.includes('placeholder') && showSpeechmaticsWarning && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-orange-100 border border-orange-200 text-orange-800 px-4 py-2 rounded-lg shadow-sm text-xs font-medium flex items-center gap-2">
-                    <span>⚠️ Speechmatics is using a placeholder key. Real-time transcription will not work.</span>
-                    <button onClick={() => setShowSpeechmaticsWarning(false)} className="hover:text-orange-950 font-bold">dismiss</button>
-                </div>
-            )}
+
             <div className="absolute top-6 left-6 z-50 flex items-center gap-2">
                 <button
                     onClick={onBack}
@@ -481,18 +441,33 @@ export function AIVoiceTutor({ settings, onBack, currentUser }: AIVoiceTutorProp
                     ))}
                 </div>
 
-                {liveTranscript && (
-                    <div className="absolute top-24 right-6 w-64 max-h-48 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200 shadow-xl p-4 overflow-y-auto z-40 animate-in fade-in slide-in-from-top duration-500">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Volume2 className="w-3 h-3 text-indigo-600" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Transcript (Speechmatics)</span>
-                            {isTranscriptionActive && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse ml-auto" />}
+                {/* Live Conversation Transcript */}
+                {conversation.status === 'connected' && transcript.length > 0 && (
+                    <div className="absolute top-24 right-6 w-72 max-h-64 bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200 shadow-2xl z-40 flex flex-col overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-t-2xl">
+                            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Live Transcript</span>
+                            <span className="ml-auto text-[10px] text-slate-400">{transcript.length} msgs</span>
                         </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed italic">
-                            {liveTranscript}
-                        </p>
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-52 scrollbar-thin">
+                            {transcript.map(msg => (
+                                <div key={msg.id} className={`flex flex-col ${msg.speaker === 'user' ? 'items-end' : 'items-start'}`}>
+                                    <span className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${msg.speaker === 'ai' ? 'text-blue-500' : 'text-emerald-500'}`}>
+                                        {msg.speaker === 'ai' ? '🤖 AI' : '🎤 You'} · {msg.time}
+                                    </span>
+                                    <div className={`text-[11px] leading-relaxed px-3 py-1.5 rounded-xl max-w-[95%] ${msg.speaker === 'ai'
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'bg-blue-50 text-blue-800'
+                                        }`}>
+                                        {msg.text}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={transcriptEndRef} />
+                        </div>
                     </div>
                 )}
+
             </div>
 
             <div className="bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 relative z-40">

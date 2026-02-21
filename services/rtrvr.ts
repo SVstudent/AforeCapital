@@ -5,7 +5,7 @@ export interface RtrvrAgentOptions {
 
 export class RtrvrService {
     private apiKey: string;
-    private baseUrl = 'https://api.rtrvr.ai';
+    private baseUrl = '/api/rtrvr';
 
     constructor(apiKey: string) {
         this.apiKey = apiKey;
@@ -43,8 +43,7 @@ export class RtrvrService {
             prompt: `Search the web for the latest information about: "${query}". Provide a concise summary of the key findings.`,
         });
 
-        // Depending on rtrvr.ai's response structure, extract the result
-        // Assuming result.output contains the agent's final answer
-        return result.output || result.result || 'No search results found.';
+        // rtrvr.ai returns { result: { text: "..." }, output: [...] }
+        return result?.result?.text || result?.output || result?.result || 'No search results found.';
     }
 }

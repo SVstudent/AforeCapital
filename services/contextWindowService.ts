@@ -1,4 +1,5 @@
-import { supabase } from '../lib/supabase';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '../convex/_generated/api';
 import { AIContextContent } from '../components/tutor/AIContextWindow';
 
 export interface ContextWindowSettings {
@@ -14,86 +15,84 @@ export interface ContextWindowSettings {
 }
 
 export class ContextWindowService {
-    async getSettings(userId: string): Promise<ContextWindowSettings | null> {
-        const { data, error } = await supabase
-            .from('context_window_settings')
-            .select('*')
-            .eq('user_id', userId)
-            .maybeSingle();
+    private client: ConvexHttpClient;
 
-        if (error) {
+    constructor() {
+        const convexUrl = import.meta.env.VITE_CONVEX_URL || '';
+        this.client = new ConvexHttpClient(convexUrl);
+    }
+
+    async getSettings(userId: string): Promise<ContextWindowSettings | null> {
+        try {
+            const data = await this.client.query(api.contextWindowSettings.get, { userId });
+            if (!data) return null;
+
+            return {
+                id: data._id,
+                user_id: data.userId,
+                x_position: data.xPosition,
+                y_position: data.yPosition,
+                is_minimized: data.isMinimized,
+                is_visible: data.isVisible,
+                auto_show_enabled: data.autoShowEnabled,
+                transparency_level: data.transparencyLevel,
+                last_shown_content: data.lastShownContent as AIContextContent | null,
+            };
+        } catch (error) {
             console.error('Error fetching context window settings:', error);
             return null;
         }
-
-        if (!data) {
-            return null;
-        }
-
-        return {
-            id: data.id,
-            user_id: data.user_id,
-            x_position: data.x_position,
-            y_position: data.y_position,
-            is_minimized: data.is_minimized,
-            is_visible: data.is_visible,
-            auto_show_enabled: data.auto_show_enabled,
-            transparency_level: data.transparency_level,
-            last_shown_content: data.last_shown_content as AIContextContent | null,
-        };
     }
 
     async createSettings(settings: Omit<ContextWindowSettings, 'id'>): Promise<ContextWindowSettings | null> {
-        const { data, error } = await supabase
-            .from('context_window_settings')
-            .insert([
-                {
-                    user_id: settings.user_id,
-                    x_position: settings.x_position,
-                    y_position: settings.y_position,
-                    is_minimized: settings.is_minimized,
-                    is_visible: settings.is_visible,
-                    auto_show_enabled: settings.auto_show_enabled,
-                    transparency_level: settings.transparency_level,
-                    last_shown_content: settings.last_shown_content,
-                },
-            ])
-            .select()
-            .single();
+        try {
+            const data = await this.client.mutation(api.contextWindowSettings.create, {
+                userId: settings.user_id,
+                xPosition: settings.x_position,
+                yPosition: settings.y_position,
+                isMinimized: settings.is_minimized,
+                isVisible: settings.is_visible,
+                autoShowEnabled: settings.auto_show_enabled,
+                transparencyLevel: settings.transparency_level,
+                lastShownContent: settings.last_shown_content,
+            });
 
-        if (error) {
+            if (!data) return null;
+
+            return {
+                id: data._id,
+                user_id: data.userId,
+                x_position: data.xPosition,
+                y_position: data.yPosition,
+                is_minimized: data.isMinimized,
+                is_visible: data.isVisible,
+                auto_show_enabled: data.autoShowEnabled,
+                transparency_level: data.transparencyLevel,
+                last_shown_content: data.lastShownContent as AIContextContent | null,
+            };
+        } catch (error) {
             console.error('Error creating context window settings:', error);
             return null;
         }
-
-        return {
-            id: data.id,
-            user_id: data.user_id,
-            x_position: data.x_position,
-            y_position: data.y_position,
-            is_minimized: data.is_minimized,
-            is_visible: data.is_visible,
-            auto_show_enabled: data.auto_show_enabled,
-            transparency_level: data.transparency_level,
-            last_shown_content: data.last_shown_content as AIContextContent | null,
-        };
     }
 
     async updateSettings(userId: string, updates: Partial<ContextWindowSettings>): Promise<boolean> {
-        const { error } = await supabase
-            .from('context_window_settings')
-            .update({
-                ...updates,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', userId);
+        try {
+            const convexUpdates: Record<string, any> = { userId };
+            if (updates.x_position !== undefined) convexUpdates.xPosition = updates.x_position;
+            if (updates.y_position !== undefined) convexUpdates.yPosition = updates.y_position;
+            if (updates.is_minimized !== undefined) convexUpdates.isMinimized = updates.is_minimized;
+            if (updates.is_visible !== undefined) convexUpdates.isVisible = updates.is_visible;
+            if (updates.auto_show_enabled !== undefined) convexUpdates.autoShowEnabled = updates.auto_show_enabled;
+            if (updates.transparency_level !== undefined) convexUpdates.transparencyLevel = updates.transparency_level;
+            if (updates.last_shown_content !== undefined) convexUpdates.lastShownContent = updates.last_shown_content;
 
-        if (error) {
+            await this.client.mutation(api.contextWindowSettings.update, convexUpdates as any);
+            return true;
+        } catch (error) {
             console.error('Error updating context window settings:', error);
             return false;
         }
-
-        return true;
     }
 
     async updatePosition(userId: string, x: number, y: number): Promise<boolean> {

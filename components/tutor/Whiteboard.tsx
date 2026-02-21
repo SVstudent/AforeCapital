@@ -16,6 +16,7 @@ export interface WhiteboardRef {
     drawText: (text: string, x: number, y: number, color?: string, fontSize?: number) => void;
     drawShape: (type: 'circle' | 'rect' | 'arrow', x: number, y: number, width: number, height: number, color?: string) => void;
     drawImage: (url: string, x: number, y: number, width: number, height: number) => void;
+    drawResearchResults: (query: string, findings: string) => void;
     clear: () => void;
     focusOnArea: (x: number, y: number, width: number, height: number) => void;
 }
@@ -170,6 +171,92 @@ export const Whiteboard = forwardRef<WhiteboardRef, WhiteboardProps>(({
             setAgentItems([]);
             clearCanvas();
         },
+        drawResearchResults: (query: string, findings: string) => {
+            // Calculate the bottom-most Y of all existing agent items
+            let bottomY = 0;
+            agentItems.forEach(item => {
+                let itemBottom = 0;
+                if (item.type === 'text') {
+                    itemBottom = (item.params.y || 0) + (item.params.fontSize || 20) + 10;
+                } else if (item.type === 'shape') {
+                    itemBottom = (item.params.y || 0) + (item.params.height || 100);
+                } else if (item.type === 'image') {
+                    itemBottom = (item.params.y || 0) + (item.params.height || 200);
+                }
+                if (itemBottom > bottomY) bottomY = itemBottom;
+            });
+
+            // Add padding below existing content
+            const startY = Math.max(bottomY + 60, 50);
+            const boxX = 50;
+            const boxWidth = 800;
+            const padding = 20;
+            const lineHeight = 26;
+            const headerHeight = 50;
+
+            // Word-wrap findings into lines
+            const maxCharsPerLine = 85;
+            const rawLines = findings.split('\n').filter(l => l.trim());
+            const wrappedLines: string[] = [];
+            rawLines.forEach(line => {
+                if (line.length <= maxCharsPerLine) {
+                    wrappedLines.push(line);
+                } else {
+                    const words = line.split(' ');
+                    let current = '';
+                    words.forEach(word => {
+                        if ((current + ' ' + word).length > maxCharsPerLine) {
+                            wrappedLines.push(current);
+                            current = word;
+                        } else {
+                            current = current ? current + ' ' + word : word;
+                        }
+                    });
+                    if (current) wrappedLines.push(current);
+                }
+            });
+
+            const contentHeight = headerHeight + padding * 2 + wrappedLines.length * lineHeight + 20;
+            const newItems: AgentItem[] = [];
+
+            // Background box
+            newItems.push({
+                id: Math.random().toString(36),
+                type: 'shape',
+                params: { type: 'rect', x: boxX, y: startY, width: boxWidth, height: contentHeight, color: '#e8f4fd', stroke: '#3b82f6', strokeWidth: 2 }
+            });
+
+            // Header bar
+            newItems.push({
+                id: Math.random().toString(36),
+                type: 'shape',
+                params: { type: 'rect', x: boxX, y: startY, width: boxWidth, height: headerHeight, color: '#3b82f6' }
+            });
+
+            // Title
+            newItems.push({
+                id: Math.random().toString(36),
+                type: 'text',
+                params: { text: `📚 Research: ${query}`, x: boxX + padding, y: startY + 14, color: '#ffffff', fontSize: 22 }
+            });
+
+            // Content lines
+            wrappedLines.forEach((line, i) => {
+                newItems.push({
+                    id: Math.random().toString(36),
+                    type: 'text',
+                    params: { text: line, x: boxX + padding, y: startY + headerHeight + padding + i * lineHeight, color: '#1e293b', fontSize: 15 }
+                });
+            });
+
+            setAgentItems(prev => [...prev, ...newItems]);
+
+            // Focus camera on the research results box
+            setTimeout(() => {
+                const whiteboardRef = ref as React.RefObject<WhiteboardRef>;
+                whiteboardRef?.current?.focusOnArea(boxX, startY, boxWidth, contentHeight);
+            }, 100);
+        },
         focusOnArea: (x: number, y: number, width: number, height: number) => {
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -274,11 +361,9 @@ export const Whiteboard = forwardRef<WhiteboardRef, WhiteboardProps>(({
                 ctx.font = `bold ${item.params.fontSize || 24}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
                 ctx.fillText(item.params.text, item.params.x, item.params.y);
             } else if (item.type === 'shape') {
-                ctx.strokeStyle = item.params.color || '#1e40af';
-                ctx.lineWidth = 3;
+                const { x, y, width: w, height: h, type, color, stroke, strokeWidth } = item.params;
                 ctx.beginPath();
-                const { x, y, width: w, height: h, type } = item.params;
-                if (type === 'circle') ctx.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
+                if (type === 'circle') ctx.arc(x + (w || 0) / 2, y + (h || 0) / 2, (w || 0) / 2, 0, Math.PI * 2);
                 else if (type === 'rect') ctx.rect(x, y, w, h);
                 else if (type === 'arrow') {
                     const headlen = 15;
@@ -289,7 +374,22 @@ export const Whiteboard = forwardRef<WhiteboardRef, WhiteboardProps>(({
                     ctx.moveTo(tox, toy);
                     ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
                 }
-                ctx.stroke();
+                // Fill if color is provided
+                if (color) {
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                }
+                // Only stroke if explicitly requested via stroke param
+                if (stroke) {
+                    ctx.strokeStyle = stroke;
+                    ctx.lineWidth = strokeWidth || 2;
+                    ctx.stroke();
+                } else if (!color) {
+                    // No fill and no explicit stroke — default outline behavior
+                    ctx.strokeStyle = '#1e40af';
+                    ctx.lineWidth = strokeWidth || 3;
+                    ctx.stroke();
+                }
             } else if (item.type === 'image') {
                 let img = imageCacheRef.current[item.params.url];
                 if (!img) {

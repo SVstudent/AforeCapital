@@ -68,6 +68,23 @@ export class VisualAgent {
             const cleanJson = jsonMatch ? jsonMatch[0] : planText.replace(/```json|```/g, '').trim();
             const plan: VisualAgentTask[] = JSON.parse(cleanJson);
 
+            // ENFORCE NON-OVERLAPPING: Shift the entire plan down if any item falls within occupied bounds
+            const safeMinY = bounds.height > 0 ? bounds.y + bounds.height + 100 : 50;
+            let planMinY = Infinity;
+            for (const task of plan) {
+                const taskY = Number(task.params.y ?? task.params.y1) || 0;
+                if (taskY < planMinY) planMinY = taskY;
+            }
+            const yShift = planMinY < safeMinY ? safeMinY - planMinY : 0;
+            if (yShift > 0) {
+                console.log(`🎨 Visual Agent: Shifting plan down by ${yShift}px to avoid overlap (safeMinY=${safeMinY}, planMinY=${planMinY})`);
+                for (const task of plan) {
+                    if (task.params.y !== undefined) task.params.y = Number(task.params.y) + yShift;
+                    if (task.params.y1 !== undefined) task.params.y1 = Number(task.params.y1) + yShift;
+                    if (task.params.y2 !== undefined) task.params.y2 = Number(task.params.y2) + yShift;
+                }
+            }
+
             // Step 2: Execution & Spatial Registration
             let tasksExecuted = 0;
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

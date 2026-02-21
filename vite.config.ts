@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        '/api/rtrvr': {
+          target: 'https://api.rtrvr.ai',
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/api\/rtrvr/, ''),
+          secure: true,
+        },
+      },
     },
     plugins: [react()],
     define: {
