@@ -30,14 +30,25 @@ export interface FirestoreUser {
 }
 
 export async function getUser(userId: string): Promise<FirestoreUser | null> {
-    const docRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? (docSnap.data() as FirestoreUser) : null;
+    if (!db) return null;
+    try {
+        const docRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? (docSnap.data() as FirestoreUser) : null;
+    } catch (e) {
+        console.warn('getUser failed:', e);
+        return null;
+    }
 }
 
 export async function updateUser(userId: string, data: Partial<FirestoreUser>): Promise<void> {
-    const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, data);
+    if (!db) return;
+    try {
+        const docRef = doc(db, 'users', userId);
+        await updateDoc(docRef, data);
+    } catch (e) {
+        console.warn('updateUser failed:', e);
+    }
 }
 
 // ==================== CLASSROOMS ====================
@@ -55,25 +66,43 @@ export interface FirestoreClassroom {
 }
 
 export async function createClassroom(data: Omit<FirestoreClassroom, 'createdAt' | 'code'>): Promise<string> {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const docRef = await addDoc(collection(db, 'classrooms'), {
-        ...data,
-        code,
-        createdAt: serverTimestamp(),
-    });
-    return docRef.id;
+    if (!db) return 'demo-id';
+    try {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const docRef = await addDoc(collection(db, 'classrooms'), {
+            ...data,
+            code,
+            createdAt: serverTimestamp(),
+        });
+        return docRef.id;
+    } catch (e) {
+        console.warn('createClassroom failed:', e);
+        return 'demo-id';
+    }
 }
 
 export async function getClassroom(classroomId: string): Promise<FirestoreClassroom | null> {
-    const docRef = doc(db, 'classrooms', classroomId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? (docSnap.data() as FirestoreClassroom) : null;
+    if (!db) return null;
+    try {
+        const docRef = doc(db, 'classrooms', classroomId);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? (docSnap.data() as FirestoreClassroom) : null;
+    } catch (e) {
+        console.warn('getClassroom failed:', e);
+        return null;
+    }
 }
 
 export async function getTeacherClassrooms(teacherId: string): Promise<Array<{ id: string } & FirestoreClassroom>> {
-    const q = query(collection(db, 'classrooms'), where('teacherId', '==', teacherId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreClassroom) }));
+    if (!db) return [];
+    try {
+        const q = query(collection(db, 'classrooms'), where('teacherId', '==', teacherId));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreClassroom) }));
+    } catch (e) {
+        console.warn('getTeacherClassrooms failed:', e);
+        return [];
+    }
 }
 
 export async function getStudentClassrooms(studentId: string): Promise<Array<{ id: string } & FirestoreClassroom>> {
@@ -96,8 +125,14 @@ export async function getStudentClassrooms(studentId: string): Promise<Array<{ i
 
 // Get ALL classrooms (for demo/admin purposes)
 export async function getAllClassrooms(): Promise<Array<{ id: string } & FirestoreClassroom>> {
-    const snapshot = await getDocs(collection(db, 'classrooms'));
-    return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreClassroom) }));
+    if (!db) return [];
+    try {
+        const snapshot = await getDocs(collection(db, 'classrooms'));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreClassroom) }));
+    } catch (e) {
+        console.warn('getAllClassrooms failed:', e);
+        return [];
+    }
 }
 
 // Get enrolled students for a classroom
@@ -157,14 +192,20 @@ export async function createAssignment(data: Omit<FirestoreAssignment, 'createdA
 }
 
 export async function getClassroomAssignments(classroomId: string): Promise<Array<{ id: string } & FirestoreAssignment>> {
-    const q = query(
-        collection(db, 'assignments'),
-        where('classroomId', '==', classroomId)
-    );
-    const snapshot = await getDocs(q);
-    const assignments = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAssignment) }));
-    // Sort client-side by order (ascending)
-    return assignments.sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, 'assignments'),
+            where('classroomId', '==', classroomId)
+        );
+        const snapshot = await getDocs(q);
+        const assignments = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAssignment) }));
+        // Sort client-side by order (ascending)
+        return assignments.sort((a, b) => (a.order || 0) - (b.order || 0));
+    } catch (e) {
+        console.warn('getClassroomAssignments failed:', e);
+        return [];
+    }
 }
 
 export async function updateAssignment(assignmentId: string, data: Partial<FirestoreAssignment>): Promise<void> {
@@ -251,18 +292,24 @@ export async function createAnnouncement(data: Omit<FirestoreAnnouncement, 'crea
 }
 
 export async function getClassroomAnnouncements(classroomId: string): Promise<Array<{ id: string } & FirestoreAnnouncement>> {
-    const q = query(
-        collection(db, 'announcements'),
-        where('classroomId', '==', classroomId)
-    );
-    const snapshot = await getDocs(q);
-    const announcements = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAnnouncement) }));
-    // Sort client-side by createdAt (descending - newest first)
-    return announcements.sort((a, b) => {
-        const aTime = a.createdAt?.toMillis?.() || 0;
-        const bTime = b.createdAt?.toMillis?.() || 0;
-        return bTime - aTime;
-    });
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, 'announcements'),
+            where('classroomId', '==', classroomId)
+        );
+        const snapshot = await getDocs(q);
+        const announcements = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAnnouncement) }));
+        // Sort client-side by createdAt (descending - newest first)
+        return announcements.sort((a, b) => {
+            const aTime = a.createdAt?.toMillis?.() || 0;
+            const bTime = b.createdAt?.toMillis?.() || 0;
+            return bTime - aTime;
+        });
+    } catch (e) {
+        console.warn('getClassroomAnnouncements failed:', e);
+        return [];
+    }
 }
 
 // ==================== TOPICS ====================
@@ -280,14 +327,20 @@ export async function createTopic(data: FirestoreTopic): Promise<string> {
 }
 
 export async function getClassroomTopics(classroomId: string): Promise<Array<{ id: string } & FirestoreTopic>> {
-    const q = query(
-        collection(db, 'topics'),
-        where('classroomId', '==', classroomId)
-    );
-    const snapshot = await getDocs(q);
-    const topics = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreTopic) }));
-    // Sort client-side by order (ascending)
-    return topics.sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, 'topics'),
+            where('classroomId', '==', classroomId)
+        );
+        const snapshot = await getDocs(q);
+        const topics = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreTopic) }));
+        // Sort client-side by order (ascending)
+        return topics.sort((a, b) => (a.order || 0) - (b.order || 0));
+    } catch (e) {
+        console.warn('getClassroomTopics failed:', e);
+        return [];
+    }
 }
 
 export async function updateTopic(topicId: string, data: Partial<FirestoreTopic>): Promise<void> {
@@ -301,52 +354,70 @@ export function subscribeToClassroomAssignments(
     classroomId: string,
     callback: (assignments: Array<{ id: string } & FirestoreAssignment>) => void
 ) {
-    const q = query(
-        collection(db, 'assignments'),
-        where('classroomId', '==', classroomId)
-    );
+    if (!db) return () => { };
+    try {
+        const q = query(
+            collection(db, 'assignments'),
+            where('classroomId', '==', classroomId)
+        );
 
-    return onSnapshot(q, (snapshot) => {
-        const assignments = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAssignment) }));
-        // Sort client-side by order
-        callback(assignments.sort((a, b) => (a.order || 0) - (b.order || 0)));
-    });
+        return onSnapshot(q, (snapshot) => {
+            const assignments = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAssignment) }));
+            // Sort client-side by order
+            callback(assignments.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        });
+    } catch (e) {
+        console.warn('subscribeToClassroomAssignments failed:', e);
+        return () => { };
+    }
 }
 
 export function subscribeToClassroomAnnouncements(
     classroomId: string,
     callback: (announcements: Array<{ id: string } & FirestoreAnnouncement>) => void
 ) {
-    const q = query(
-        collection(db, 'announcements'),
-        where('classroomId', '==', classroomId)
-    );
+    if (!db) return () => { };
+    try {
+        const q = query(
+            collection(db, 'announcements'),
+            where('classroomId', '==', classroomId)
+        );
 
-    return onSnapshot(q, (snapshot) => {
-        const announcements = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAnnouncement) }));
-        // Sort client-side by createdAt (newest first)
-        callback(announcements.sort((a, b) => {
-            const aTime = a.createdAt?.toMillis?.() || 0;
-            const bTime = b.createdAt?.toMillis?.() || 0;
-            return bTime - aTime;
-        }));
-    });
+        return onSnapshot(q, (snapshot) => {
+            const announcements = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreAnnouncement) }));
+            // Sort client-side by createdAt (newest first)
+            callback(announcements.sort((a, b) => {
+                const aTime = a.createdAt?.toMillis?.() || 0;
+                const bTime = b.createdAt?.toMillis?.() || 0;
+                return bTime - aTime;
+            }));
+        });
+    } catch (e) {
+        console.warn('subscribeToClassroomAnnouncements failed:', e);
+        return () => { };
+    }
 }
 
 export function subscribeToClassroomTopics(
     classroomId: string,
     callback: (topics: Array<{ id: string } & FirestoreTopic>) => void
 ) {
-    const q = query(
-        collection(db, 'topics'),
-        where('classroomId', '==', classroomId)
-    );
+    if (!db) return () => { };
+    try {
+        const q = query(
+            collection(db, 'topics'),
+            where('classroomId', '==', classroomId)
+        );
 
-    return onSnapshot(q, (snapshot) => {
-        const topics = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreTopic) }));
-        // Sort client-side by order
-        callback(topics.sort((a, b) => (a.order || 0) - (b.order || 0)));
-    });
+        return onSnapshot(q, (snapshot) => {
+            const topics = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as FirestoreTopic) }));
+            // Sort client-side by order
+            callback(topics.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        });
+    } catch (e) {
+        console.warn('subscribeToClassroomTopics failed:', e);
+        return () => { };
+    }
 }
 
 // ==================== RUBRICS ====================
