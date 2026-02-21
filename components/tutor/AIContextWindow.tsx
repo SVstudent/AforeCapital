@@ -27,7 +27,7 @@ interface AIContextWindowProps {
     onPositionChange: (x: number, y: number) => void;
 }
 
-const MAX_WIDTH = 400;
+const MAX_WIDTH = 320;
 const MAX_HEIGHT = 600;
 const MINIMIZED_HEIGHT = 48;
 
@@ -86,31 +86,33 @@ export function AIContextWindow({
         >
             <div
                 ref={nodeRef}
-                className={`fixed bg-white rounded-lg shadow-2xl border-2 border-slate-300 transition-all duration-300 ${isDragging ? 'cursor-grabbing' : ''
+                className={`absolute bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 transition-opacity duration-300 ${isDragging ? 'cursor-grabbing scale-[1.02]' : ''
                     }`}
                 style={{
                     width: MAX_WIDTH,
                     maxHeight: isMinimized ? MINIMIZED_HEIGHT : MAX_HEIGHT,
                     opacity: transparency,
-                    zIndex: 40,
+                    zIndex: 50,
                 }}
             >
-                <div className="drag-handle bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 rounded-t-lg cursor-grab active:cursor-grabbing flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                        <GripHorizontal className="w-4 h-4 opacity-70" />
-                        <h3 className="font-semibold text-sm truncate">{content.title}</h3>
+                <div className="drag-handle bg-white/50 backdrop-blur-sm border-b border-slate-100 px-4 py-3 rounded-t-2xl cursor-grab active:cursor-grabbing flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                        <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm shadow-blue-100">
+                            <Lightbulb className="w-4 h-4 text-white" />
+                        </div>
+                        <h3 className="font-bold text-sm text-slate-800 tracking-tight truncate">{content.title}</h3>
                     </div>
                     <div className="flex items-center space-x-1">
                         <button
                             onClick={onToggleMinimize}
-                            className="p-1 hover:bg-blue-800 rounded transition"
+                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-all"
                             title={isMinimized ? 'Maximize' : 'Minimize'}
                         >
                             {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-1 hover:bg-blue-800 rounded transition"
+                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                             title="Close"
                         >
                             <X className="w-4 h-4" />
@@ -128,15 +130,18 @@ export function AIContextWindow({
                                 return (
                                     <div
                                         key={index}
-                                        className={`rounded-lg border-2 p-4 ${colorClass} transition-all hover:shadow-md`}
+                                        className={`rounded-2xl border p-4 ${colorClass} transition-all hover:shadow-sm animate-in fade-in slide-in-from-bottom-1 duration-500`}
+                                        style={{ animationDelay: `${index * 100}ms` }}
                                     >
                                         <div className="flex items-center space-x-2 mb-3">
-                                            <Icon className="w-4 h-4 text-slate-600" />
-                                            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                                            <div className="bg-white/60 p-1 rounded-md">
+                                                <Icon className="w-3.5 h-3.5 text-slate-700" />
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                                 {block.type.replace('-', ' ')}
                                             </span>
                                         </div>
-                                        <div className="text-sm">
+                                        <div className="text-sm text-slate-700 leading-relaxed font-medium">
                                             <MathContent content={block.content} />
                                         </div>
                                     </div>

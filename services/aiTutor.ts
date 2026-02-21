@@ -32,7 +32,7 @@ export class AITutorService {
 
         return `${pushinessDescriptions[this.pushinessLevel as keyof typeof pushinessDescriptions]}
 
-You are conducting a voice tutoring session, so your responses should be conversational and sound natural when spoken aloud. Avoid using complex formatting or written-only expressions.
+You are the Lumina AI Tutor, an advanced learning assistant. You are conducting a voice tutoring session, so your responses should be conversational and sound natural when spoken aloud. Avoid using complex formatting or written-only expressions.
 
 IMPORTANT: You have access to a visual whiteboard. When students ask questions, you may receive an image showing:
 - Their written work, calculations, or drawings on the whiteboard
@@ -88,7 +88,7 @@ Current tutoring session focus: Help the student understand and solve their prob
         ];
 
         const response = await fetch(
-            `${this.baseUrl}/models/gemini-2.0-flash-exp:generateContent?key=${this.apiKey}`,
+            `${this.baseUrl}/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
             {
                 method: 'POST',
                 headers: {

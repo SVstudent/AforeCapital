@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@elevenlabs/react": "^0.14.0",
     "@google/genai": "^1.39.0",
     "@supabase/supabase-js": "^2.57.4",
     "firebase": "^12.9.0",
