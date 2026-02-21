@@ -13,12 +13,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (prevent duplicate initialization)
-let app;
+let app = null;
 try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    // Only attempt to initialize if we have a plausible API key
+    if (firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined' && !firebaseConfig.apiKey.includes('PLACEHOLDER')) {
+        app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    } else {
+        console.warn('Firebase API key is missing or is the default placeholder. Firebase features will be disabled.');
+    }
 } catch (error) {
     console.error('Firebase initialization failed:', error);
-    // Create a mock app or handle gracefully
     app = null;
 }
 

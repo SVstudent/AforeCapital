@@ -6,6 +6,7 @@ import App from './App';
 
 // Import seed script to expose window.seedFirestore()
 import './seedFirestore';
+import './index.css';
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || '');
 
