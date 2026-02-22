@@ -2,7 +2,7 @@
   <h1 align="center">🧠 LuminaOS</h1>
   <p align="center"><strong>The Autonomous Multi-Agent Learning Ecosystem</strong></p>
   <p align="center">
-    <em>Powered by ElevenLabs · Convex · MiniMax · Speechmatics · Gemini 2.0</em>
+    <em>Powered by ElevenLabs · Convex · MiniMax · Speechmatics </em>
   </p>
   <p align="center">
     <a href="https://luminaacademyos.vercel.app">🌐 Live Platform</a> ·
