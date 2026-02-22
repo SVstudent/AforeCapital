@@ -16,6 +16,8 @@
 
 ## 🌪️ The "Agentic" Breakthrough
 
+View the Video here: https://youtu.be/yTS-J_T3SlU
+
 Education is traditionally static. LuminaOS transforms it into a **Living Classroom** through **Multi-Agent Orchestration**. Unlike simple chatbots, LuminaOS deploys a fleet of specialized agents that collaborate autonomously via **Agent-to-Agent (A2A)** protocols to research, visualize, and explain complex concepts in real-time.
 
 ### **Multi-Agent Orchestration Loop:**
