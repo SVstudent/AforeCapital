@@ -57,6 +57,35 @@ Our whiteboard isn't just a drawing tool; it's an agentic canvas.
 | **React 19** | **Frontend Core** | Leveraging ultra-fast rendering for the infinite canvas and real-time visualizers. |
 
 ---
+🚀 Getting Started
+1. Environment Secrets
+Create a .env.local containing the following core keys:
+
+env
+# Sponsor Integrations
+VITE_ELEVENLABS_API_KEY=your_key
+VITE_ELEVENLABS_AGENT_ID=your_id
+VITE_CONVEX_URL=your_url
+VITE_GEMINI_API_KEY=your_key
+VITE_MINIMAX_API_KEY=your_key
+VITE_RTRVR_API_KEY=your_key
+VITE_SPEECHMATICS_API_KEY=your_key
+2. Launching LuminaOS
+bash
+# Install dependencies
+npm install --legacy-peer-deps
+# Spin up the Convex backend
+npx convex dev
+# Run the local frontend
+npm run dev
+💡 Impact & Vision
+LuminaOS democratizes the 2 Sigma Advantage. By providing every student with a conversational tutor that can research the world and visualize the abstract, we bridge the gap between static content and elite personal instruction.
+
+This isn't an AI-assisted app—this is an Agent-Native future for education.
+
+📝 License
+MIT License. Created with ❤️ for the Return of the Agents Hackathon.
+
 
 ## 🏗️ Multi-Agent Architecture
 
