@@ -43,12 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth state changes
     useEffect(() => {
-        if (!auth) {
-            setLoading(false);
-            setUser(null);
-            return;
-        }
-
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 // Fetch user data from Firestore

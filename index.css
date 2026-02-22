@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --lumina-indigo: #6366f1;
-  --lumina-violet: #8b5cf6;
-  --lumina-emerald: #10b981;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --border-color: #e2e8f0;
-  --bg-light: #f8fafc;
+    --lumina-indigo: #6366f1;
+    --lumina-violet: #8b5cf6;
+    --lumina-emerald: #10b981;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --bg-light: #f8fafc;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-light);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
 }

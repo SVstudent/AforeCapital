@@ -13,46 +13,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (prevent duplicate initialization)
-let app = null;
-export let isFirebaseReady = false;
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-try {
-    // Check for obvious placeholders or missing keys
-    const isPlausibleKey = firebaseConfig.apiKey &&
-        firebaseConfig.apiKey !== 'undefined' &&
-        !firebaseConfig.apiKey.includes('PLACEHOLDER') &&
-        firebaseConfig.apiKey.length > 10;
-
-    if (isPlausibleKey) {
-        app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-        isFirebaseReady = true;
-    }
-} catch (error) {
-    console.warn('Firebase initializeApp failed:', error);
-}
-
-// Auth instance - Wrapped in try/catch to handle invalid API key errors during service creation
-let authInstance = null;
-try {
-    if (app) authInstance = getAuth(app);
-} catch (error) {
-    console.warn('Firebase Auth creation failed:', error);
-    isFirebaseReady = false;
-}
-export const auth = authInstance;
+// Auth instance
+export const auth = getAuth(app);
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Firestore instance - Wrapped in try/catch to handle invalid API key errors
-let dbInstance = null;
-try {
-    if (app) dbInstance = getFirestore(app);
-} catch (error) {
-    console.warn('Firebase Firestore creation failed:', error);
-    isFirebaseReady = false;
-}
-export const db = dbInstance;
+// Firestore instance
+export const db = getFirestore(app);
 
 export default app;
